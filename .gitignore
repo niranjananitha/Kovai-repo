@@ -20,3 +20,7 @@ frontend/dist/
 .DS_Store
 .vscode/
 .idea/
+
+# verification scratch files
+shots/
+.playwright-mcp/

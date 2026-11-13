@@ -1,12 +1,20 @@
 # TaskFlow
 
-A single-page personal task list. Sign in with Google, add tasks, move them between **Planned / In Progress / Complete**, filter by status, and delete them. Each person sees only their own tasks.
+A single-page personal task list. Create an account with email and password, or continue with Google. Add tasks, move them between **Planned / In Progress / Complete** on a board (drag and drop) or in a list, filter and search, and delete them (with Undo). Each person sees only their own tasks.
+
+| Sign in | Board |
+| --- | --- |
+| ![Sign-in screen](docs/screenshots/sign-in.png) | ![Board view](docs/screenshots/board.png) |
+
+| List | Phone (360 px) |
+| --- | --- |
+| ![List view](docs/screenshots/list.png) | ![Mobile board](docs/screenshots/mobile-board.png) |
 
 **Live app:** https://taskflow-zb8j.onrender.com (free hosting: the first load can take up to a minute)
 
 ## Architecture
 
-One repository, one deployed service. The React frontend is built into static files (`frontend/dist`). In production the Flask backend serves those files **and** the JSON API under `/api` from the same origin, so there is no CORS and no second server. In development the Vite dev server proxies `/api` to Flask, which behaves the same way. Sign-in uses Google's ID-token flow: the browser gets a signed token from Google, the backend verifies it with `google-auth`, finds or creates the user, and stores only the user id in a signed, HttpOnly session cookie. Data lives in PostgreSQL (Neon) in production and SQLite locally.
+One repository, one deployed service. The React frontend is built into static files (`frontend/dist`). In production the Flask backend serves those files **and** the JSON API under `/api` from the same origin, so there is no CORS and no second server. In development the Vite dev server proxies `/api` to Flask, which behaves the same way. There are two ways to sign in, and both end the same way: the backend stores only the user id in a signed, HttpOnly session cookie. With Google, the browser gets a signed ID token and the backend verifies it with `google-auth`. With email and password, the backend checks a salted Werkzeug hash. Data lives in PostgreSQL (Neon) in production and SQLite locally.
 
 ## Stack
 
@@ -14,7 +22,9 @@ One repository, one deployed service. The React frontend is built into static fi
 | --- | --- |
 | React + Vite (JavaScript) | Simple component model and a fast dev/build tool |
 | Tailwind CSS | Styling without writing a CSS framework by hand |
-| @react-oauth/google | Official-style Google sign-in button |
+| @dnd-kit/core | Accessible drag and drop (mouse, touch and keyboard) for the board |
+| lucide-react | Consistent icons |
+| @react-oauth/google | Google sign-in button |
 | Flask (app factory) | Small, readable web framework |
 | Flask-SQLAlchemy | All DB access through an ORM, so no string-built SQL |
 | google-auth | Google's own library for verifying ID tokens |
@@ -25,7 +35,7 @@ One repository, one deployed service. The React frontend is built into static fi
 
 ## Local setup
 
-You need Python 3.11+ and Node 20+. You also need a Google OAuth **Web** client ID:
+You need Python 3.11+ and Node 20+. For the optional "Continue with Google" button you also need a Google OAuth **Web** client ID:
 Google Cloud Console → APIs & Services → Credentials → Create credentials → OAuth client ID → Web application. Under **Authorized JavaScript origins** add `http://localhost:5173`. (If you use a Firebase project, it is the same Google Cloud project.) Copy the Client ID.
 
 ### Backend
@@ -51,13 +61,14 @@ cp .env.example .env        # then edit .env: set VITE_GOOGLE_CLIENT_ID (same va
 npm run dev
 ```
 
-Open <http://localhost:5173> and sign in.
+Open <http://localhost:5173> and create an account, or continue with Google. Email and password works without any Google setup.
 
 ### Tests and build
 
 ```bash
 cd backend && pytest            # API tests (no network; Google verification is faked)
-cd frontend && npm test         # Vitest: validation and status helpers
+cd frontend && npm test         # Vitest: validation, status, search and format helpers
+cd frontend && npm run lint     # ESLint
 cd frontend && npm run build    # production build into frontend/dist
 ```
 
@@ -79,8 +90,10 @@ All requests and responses are JSON. `POST`, `PATCH` and `DELETE` must send `Con
 
 | Method | Path | Description | Errors |
 | --- | --- | --- | --- |
+| POST | `/api/auth/register` | Body `{name, email, password}`. Creates the account and signs in (201) | 400, 409 |
+| POST | `/api/auth/login` | Body `{email, password}`. Signs in. Unknown email, wrong password and Google-only accounts give the same 401 | 400, 401, 429 |
 | POST | `/api/auth/google` | Body `{credential}`. Verifies the Google token, signs in, returns the user | 400, 401 |
-| GET | `/api/auth/me` | Current user | 401 |
+| GET | `/api/auth/me` | Current user, including `auth_methods` (never the password hash) | 401 |
 | POST | `/api/auth/logout` | Ends the session | |
 | GET | `/api/tasks` | Your tasks, newest first | 401 |
 | POST | `/api/tasks` | Body `{title, description?}`. Status is always `planned` | 400, 401 |
@@ -88,11 +101,13 @@ All requests and responses are JSON. `POST`, `PATCH` and `DELETE` must send `Con
 | DELETE | `/api/tasks/<id>` | Deletes a task | 401, 404 |
 | GET | `/api/health` | `{"status": "ok"}`, no session needed | |
 
-Status codes: 400 validation, 401 not signed in, 404 not found (also used for other people's tasks), 415 wrong content type, 500 unexpected.
+Status codes: 400 validation, 401 not signed in or bad credentials, 404 not found (also used for other people's tasks), 409 email already registered, 415 wrong content type, 429 too many failed logins, 500 unexpected.
 
 ## Security summary
 
 - The Google ID token is verified on the server (signature, expiry, issuer, audience = our client ID, `email_verified`). Users are identified by the token's `sub`.
+- Passwords: 8 to 128 characters, never trimmed, stored only as a salted Werkzeug hash. Login answers identically for unknown email, wrong password and Google-only accounts, and still checks a dummy hash so timing does not reveal which emails exist. After 5 failed logins for one email in 15 minutes, further attempts get 429.
+- Google linking: if someone signs in with Google using an email that already has a password account, the accounts are linked and the password is removed. Nobody verified the email when the password was set, so otherwise anyone could have registered someone else's email first.
 - Session: signed cookie with only the user id; HttpOnly, SameSite=Lax, Secure in production, 7 days. The app refuses to start in production without `SECRET_KEY`.
 - Every task query is filtered by the session's user id; someone else's task returns 404.
 - CSRF: JSON-only content type + SameSite=Lax + no CORS (explained in `backend/app/__init__.py`).
@@ -117,6 +132,9 @@ A local SQLite file from before this change is not upgraded: the app stops with 
 
 - No database migrations: tables are created with `db.create_all()` at startup, so changing a column later needs a manual change.
 - Titles and descriptions cannot be edited after creation.
+- Login lockout is in memory: each gunicorn worker counts separately and a restart clears it (a shared store such as Redis or the database is the production fix). It is also per email, so someone can lock a victim out of password sign-in for 15 minutes by guessing wrongly; Google sign-in still works.
+- No email verification and no password reset: a forgotten password cannot be recovered.
+- Delete is final 5 seconds after pressing it. Closing the tab inside that window keeps the task.
 - No pagination (meant for up to a few hundred tasks per user), no account deletion, no data export.
 - Free hosting sleeps when idle, so the first load is slow.
 
@@ -131,20 +149,24 @@ backend/
   app/
     __init__.py        create_app: config, security settings, serving the frontend
     models.py          User and Task tables, status list
-    auth.py            Google token check, session, /api/auth routes
+    auth.py            register, login (rate limited), Google token check, session
+    schema.py          startup upgrade of an older users table
     tasks.py           /api/tasks routes and validation
     errors.py          one JSON error format
-  tests/               pytest API tests
+  tests/               pytest API tests (tasks, Google auth, password auth)
 frontend/
   .env.example         frontend settings template
   vite.config.js       Vite + Tailwind + /api proxy
   src/
     main.jsx           entry, Google provider
-    App.jsx            session check, login vs task board
+    App.jsx            session check, auth screen vs app
     api.js             fetch wrapper and error messages
-    status.js          statuses, labels, filter and count helpers
-    validation.js      title/description checks
+    status.js          statuses (single source of truth), filter, count, search, sort
+    validation.js      title, description, name, email, password checks
+    format.js          initials and date helpers
     *.test.js          Vitest tests
-    components/        Header, LoginScreen, TaskForm, FilterTabs, TaskItem, TaskBoard, Loading
-docs/                  USER_GUIDE, ASSUMPTIONS, AI_USAGE, BUILD_LOG
+    hooks/             useTasks (data + optimistic moves + undo delete), useToasts, useIsMobile
+    components/        AuthScreen, AppShell, Sidebar, TopBar, Board, ListView, TaskCard,
+                       QuickAddDialog, Toasts and small pieces (Logo, Avatar, ProgressRing, ...)
+docs/                  USER_GUIDE, ASSUMPTIONS, AI_USAGE, BUILD_LOG, screenshots/
 ```

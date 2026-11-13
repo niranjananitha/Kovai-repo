@@ -11,6 +11,10 @@
 3. It then built the project in steps, with a git commit after each step, and ran the backend tests, frontend tests and frontend build.
 4. It checked Render's documentation to decide between a Python build with Node and a Dockerfile (the Python runtime includes Node, so `render.yaml` is used).
 
+## Later change request
+
+After the first deployment, a second prompt asked the assistant to (1) add email and password accounts alongside Google sign-in, with login rate limiting and a startup upgrade for the existing database, and (2) redesign the frontend as a board/list task manager with drag and drop, search, keyboard shortcuts and undo-delete, following a stated visual direction and in three phases with a stop after each. The assistant implemented both, ran the backend and frontend tests and the build, and checked the running app in a browser. The full text of that second prompt is not reproduced here.
+
 ## Manual changes and corrections
 
 TODO: to be written by the project owner. Describe honestly what you reviewed, tested, changed or corrected yourself.

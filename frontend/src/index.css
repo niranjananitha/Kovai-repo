@@ -1,13 +1,96 @@
 @import "tailwindcss";
 
-body {
-  background: #f8fafc;
-  color: #0f172a;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+/* TaskFlow's palette and font. Tailwind turns each --color-x into bg-x, text-x, border-x. */
+@theme static {
+  --font-sans: "Schibsted Grotesk", ui-sans-serif, system-ui, sans-serif;
+
+  --color-canvas: #eef0f4;
+  --color-surface: #ffffff;
+  --color-ink: #1a2233;
+  --color-muted: #566274; /* a shade darker than #5E6A7D so text on the column background reaches 4.5:1 */
+  --color-line: #d5dae3;
+
+  --color-sidebar: #1a2233;
+  --color-sidebar-ink: #c9d1de;
+
+  --color-accent: #f0b429; /* marigold: primary buttons and focus ring */
+
+  --color-planned: #8792a6;
+  --color-progress: #3e6fe0;
+  --color-complete: #1f9d6b;
+  --color-danger: #b42318;
 }
 
-/* A clear keyboard focus ring on every control. */
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+/* Keyboard focus: an ink ring with a marigold halo, visible on light and dark surfaces. */
 :focus-visible {
-  outline: 3px solid #4f46e5;
+  outline: 3px solid var(--color-ink);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-accent);
+}
+.on-dark :focus-visible {
+  outline-color: var(--color-accent);
+  box-shadow: none;
+}
+
+/* A few shared control styles so the components stay readable. */
+@layer components {
+  .btn {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply bg-accent font-bold text-ink hover:brightness-95;
+  }
+  .btn-quiet {
+    @apply border border-line bg-surface text-ink hover:bg-canvas;
+  }
+  .field {
+    @apply min-h-11 w-full rounded-lg border border-line bg-surface px-3 py-2 text-ink placeholder:text-muted;
+  }
+}
+
+/* The one bold moment: a hand-drawn strike line scribbles across a title when a task completes. */
+@keyframes draw-strike {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+.strike path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+.strike-animate path {
+  animation: draw-strike 0.35s ease-out both;
+  animation-delay: calc(var(--i) * 40ms);
+}
+
+/* A new task flashes a marigold ring once. */
+@keyframes flash {
+  from { box-shadow: 0 0 0 4px var(--color-accent); }
+  to { box-shadow: 0 0 0 0 transparent; }
+}
+.flash {
+  animation: flash 1.4s ease-out;
+}
+
+/* Sign-in illustration: one card slides to Complete once, then rests. */
+@keyframes slide-across {
+  to { transform: translateX(calc(100% + 0.75rem)); }
+}
+.slide-across {
+  animation: slide-across 0.9s cubic-bezier(0.4, 0, 0.2, 1) 0.7s both;
+}
+
+/* Honour "reduce motion": animations jump straight to their end state. */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

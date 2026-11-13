@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from './api'
-import Header from './components/Header'
+import AppShell from './components/AppShell'
+import AuthScreen from './components/AuthScreen'
 import Loading from './components/Loading'
-import LoginScreen from './components/LoginScreen'
-import TaskBoard from './components/TaskBoard'
 
 export default function App() {
   // user: undefined = still asking the server, null = signed out, object = signed in
@@ -21,7 +20,7 @@ export default function App() {
   }
 
   // Ask the server who we are before drawing anything, so a signed-in user
-  // never sees the login screen flash.
+  // never sees the sign-in screen flash.
   useEffect(checkSession, [])
 
   function retry() {
@@ -47,29 +46,19 @@ export default function App() {
   if (startupError) {
     return (
       <main className="mx-auto max-w-md px-4 py-16 text-center">
-        <p role="alert" className="rounded border border-red-300 bg-red-50 p-3 text-red-900">
+        <p role="alert" className="rounded-xl border border-danger/40 bg-danger/10 p-4 font-medium text-danger">
           {startupError}
         </p>
-        <button type="button" onClick={retry} className="mt-4 rounded bg-indigo-700 px-4 py-2 text-white">
+        <button type="button" onClick={retry} className="btn btn-primary mt-4">
           Try again
         </button>
       </main>
     )
   }
 
-  if (user === undefined) return <Loading text="Loading…" />
+  if (user === undefined) return <Loading fullScreen text="Loading…" />
 
-  if (user === null) return <LoginScreen onSignedIn={setUser} notice={notice} />
+  if (user === null) return <AuthScreen onSignedIn={setUser} notice={notice} />
 
-  return (
-    <>
-      <Header user={user} onSignOut={signOut} />
-      {notice && (
-        <p role="alert" className="mx-auto mt-4 max-w-2xl rounded border border-red-300 bg-red-50 p-3 text-red-900">
-          {notice}
-        </p>
-      )}
-      <TaskBoard onSessionExpired={handleSessionExpired} />
-    </>
-  )
+  return <AppShell user={user} onSignOut={signOut} onSessionExpired={handleSessionExpired} />
 }
