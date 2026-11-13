@@ -2,7 +2,7 @@
 
 A single-page personal task list. Sign in with Google, add tasks, move them between **Planned / In Progress / Complete**, filter by status, and delete them. Each person sees only their own tasks.
 
-**Live app:** `TODO: add the Render URL after deploying`
+**Live app:** https://taskflow-zb8j.onrender.com (free hosting: the first load can take up to a minute)
 
 ## Architecture
 
