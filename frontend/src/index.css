@@ -46,9 +46,6 @@ body {
   .btn-primary {
     @apply bg-accent font-bold text-ink hover:brightness-95;
   }
-  .btn-quiet {
-    @apply border border-line bg-surface text-ink hover:bg-canvas;
-  }
   .field {
     @apply min-h-11 w-full rounded-lg border border-line bg-surface px-3 py-2 text-ink placeholder:text-muted;
   }

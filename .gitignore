@@ -24,3 +24,4 @@ frontend/dist/
 # verification scratch files
 shots/
 .playwright-mcp/
+*.log

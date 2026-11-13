@@ -217,7 +217,7 @@ DONE MEANS
 - The automated test for user isolation passes.
 - The five documents exist and match what the app actually does.
 
-(Follow-up from the owner after the plan: "we need to build in 2 hours and i
-create the firebase project named as kovai", then "yes do what u able to in 2
-hours and i need the runable Application".)
+(Follow-up messages from the owner after the plan: that a Firebase project called
+kovai had been created and the build had about 2 hours, then "yes do what u able
+to in 2 hours and i need the runable Application".)
 ````

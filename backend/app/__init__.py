@@ -17,7 +17,9 @@ def create_app(test_config=None):
     load_dotenv()  # reads backend/.env in development; harmless if the file is missing
     app = Flask(__name__, static_folder=None)
 
-    is_production = os.environ.get("FLASK_ENV") == "production"
+    # Capital letters, spaces and quotes are ignored, so "Production " typed into a hosting
+    # dashboard still turns the production safety settings on.
+    is_production = os.environ.get("FLASK_ENV", "").strip().strip("'\"").lower() == "production"
     secret_key = os.environ.get("SECRET_KEY")
 
     # SECURITY: refuse to start in production without a real secret, because the

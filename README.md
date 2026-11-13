@@ -46,18 +46,18 @@ python -m venv venv
 # Windows PowerShell:  .\venv\Scripts\Activate.ps1
 # macOS / Linux / Git Bash:  source venv/bin/activate   (Git Bash on Windows: source venv/Scripts/activate)
 pip install -r requirements-dev.txt
-cp .env.example .env        # then edit .env: set GOOGLE_CLIENT_ID (leave the rest empty locally)
+cp .env.example .env        # optional: set GOOGLE_CLIENT_ID in .env; leave the rest empty locally
 flask --app wsgi run --port 5000
 ```
 
-With no `DATABASE_URL`, a SQLite file (`backend/instance/taskflow.db`) is created automatically.
+With no `DATABASE_URL`, a SQLite file (`backend/instance/taskflow.db`) is created automatically. (If `DATABASE_URL` points at a real Neon database, running locally changes that database too.)
 
 ### Frontend (second terminal)
 
 ```bash
 cd frontend
 npm install
-cp .env.example .env        # then edit .env: set VITE_GOOGLE_CLIENT_ID (same value as above)
+cp .env.example .env        # optional: set VITE_GOOGLE_CLIENT_ID (same value as above)
 npm run dev
 ```
 
@@ -79,7 +79,7 @@ To try the production setup locally, run `npm run build` in `frontend`, then `fl
 1. Push this repo to GitHub.
 2. Create a free PostgreSQL database on [Neon](https://neon.tech) and copy its connection string.
 3. In Render: **New → Blueprint**, pick the repo. Render reads `render.yaml`.
-4. When asked, fill in `GOOGLE_CLIENT_ID`, `VITE_GOOGLE_CLIENT_ID` (both are your Google Client ID) and `DATABASE_URL` (the Neon string). `SECRET_KEY` is generated for you.
+4. When asked, fill in `GOOGLE_CLIENT_ID`, `VITE_GOOGLE_CLIENT_ID` (both are your Google Client ID, only needed for the Google button) and `DATABASE_URL`. For `DATABASE_URL` paste only the Neon string that starts with `postgresql://`, with no quotes or extra words. `SECRET_KEY` is generated for you and `FLASK_ENV` is set to `production` by `render.yaml`.
 5. After the first deploy, copy your `https://….onrender.com` URL into Google Cloud Console → your OAuth client → **Authorized JavaScript origins**. Update the live URL at the top of this file.
 
 Render's Python runtime includes Node, so the build command installs Python packages and runs `npm ci && npm run build` in one go. The free service sleeps when idle; the first request can take up to a minute.
@@ -153,12 +153,16 @@ backend/
     schema.py          startup upgrade of an older users table
     tasks.py           /api/tasks routes and validation
     errors.py          one JSON error format
-  tests/               pytest API tests (tasks, Google auth, password auth)
+  tests/               pytest: tasks, Google auth, password auth, production settings
 frontend/
   .env.example         frontend settings template
+  index.html           page shell and the font
   vite.config.js       Vite + Tailwind + /api proxy
+  eslint.config.js     lint rules
+  public/favicon.svg   browser tab icon
   src/
     main.jsx           entry, Google provider
+    index.css          colours, font, animations (Tailwind theme)
     App.jsx            session check, auth screen vs app
     api.js             fetch wrapper and error messages
     status.js          statuses (single source of truth), filter, count, search, sort
