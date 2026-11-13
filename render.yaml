@@ -1,0 +1,29 @@
+# Render Blueprint: one free web service that builds the frontend and runs Flask.
+# Render's Python runtime already includes Node and npm, so no Dockerfile is needed.
+services:
+  - type: web
+    name: taskflow
+    runtime: python
+    plan: free
+    # 1) install Python packages, 2) build the React app into frontend/dist
+    buildCommand: pip install -r backend/requirements.txt && cd frontend && npm ci && npm run build
+    # Flask serves frontend/dist and the /api routes from the same origin.
+    startCommand: gunicorn --chdir backend wsgi:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.3
+      - key: NODE_VERSION
+        value: 24
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      # Paste these two in the Render dashboard (they are secrets or personal to you):
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      # Needed at BUILD time: Vite bakes this public value into the frontend.
+      - key: VITE_GOOGLE_CLIENT_ID
+        sync: false
