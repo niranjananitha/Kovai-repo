@@ -11,6 +11,14 @@ class ApiError(Exception):
         self.message = message
 
 
+def json_object():
+    """The request body must be a JSON object."""
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        raise ApiError(400, "validation_error", "Request body must be a JSON object.")
+    return body
+
+
 def error_response(status, code, message):
     return jsonify({"error": {"code": code, "message": message}}), status
 

@@ -98,6 +98,21 @@ Status codes: 400 validation, 401 not signed in, 404 not found (also used for ot
 - CSRF: JSON-only content type + SameSite=Lax + no CORS (explained in `backend/app/__init__.py`).
 - The server validates all input; all DB access goes through SQLAlchemy.
 
+## Upgrading an existing database (email + password sign-in)
+
+`db.create_all()` never alters tables that already exist, so a database created before password accounts needs three changes. The app runs the equivalent steps itself at startup on PostgreSQL (safe to repeat). To run them by hand, for example in Neon's SQL Editor:
+
+```sql
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+ALTER TABLE users ALTER COLUMN google_sub DROP NOT NULL;
+UPDATE users SET email = lower(trim(email)) WHERE email IS NOT NULL;
+-- first check this returns no rows (duplicate emails would block the index):
+SELECT lower(email) FROM users WHERE email IS NOT NULL GROUP BY 1 HAVING count(*) > 1;
+CREATE UNIQUE INDEX IF NOT EXISTS ix_users_email ON users (email);
+```
+
+A local SQLite file from before this change is not upgraded: the app stops with a message, so delete `backend/instance/taskflow.db` and restart.
+
 ## Known limitations
 
 - No database migrations: tables are created with `db.create_all()` at startup, so changing a column later needs a manual change.

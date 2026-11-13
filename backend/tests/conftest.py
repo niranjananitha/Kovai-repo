@@ -1,6 +1,7 @@
 import pytest
 
 from app import create_app
+from app.auth import reset_login_limiter
 
 CLIENT_ID = "test-client-id"
 
@@ -26,8 +27,27 @@ def app(monkeypatch):
     return create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite://", "GOOGLE_CLIENT_ID": CLIENT_ID})
 
 
+@pytest.fixture(autouse=True)
+def clean_login_limiter():
+    """The failed-login counter is in memory, so reset it around every test."""
+    reset_login_limiter()
+    yield
+    reset_login_limiter()
+
+
 def sign_in(client, credential):
     return client.post("/api/auth/google", json={"credential": credential})
+
+
+PASSWORD = "correct horse"
+
+
+def register(client, name="Dana", email="dana@example.com", password=PASSWORD, **extra):
+    return client.post("/api/auth/register", json={"name": name, "email": email, "password": password, **extra})
+
+
+def login(client, email="dana@example.com", password=PASSWORD):
+    return client.post("/api/auth/login", json={"email": email, "password": password})
 
 
 @pytest.fixture

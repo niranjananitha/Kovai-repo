@@ -7,6 +7,7 @@ from flask import Flask, jsonify, request, send_from_directory
 
 from .errors import ApiError, register_error_handlers
 from .models import db
+from .schema import upgrade_old_schema
 
 # Built frontend, served by Flask in production (see Dockerfile).
 DIST_DIR = Path(__file__).resolve().parents[2] / "frontend" / "dist"
@@ -96,5 +97,6 @@ def create_app(test_config=None):
     # No migration tool: tables are created at startup. Known limitation (see README).
     with app.app_context():
         db.create_all()
+        upgrade_old_schema()  # create_all cannot alter tables that already exist
 
     return app

@@ -1,21 +1,13 @@
-from flask import Blueprint, g, jsonify, request
+from flask import Blueprint, g, jsonify
 
 from .auth import login_required
-from .errors import ApiError
+from .errors import ApiError, json_object
 from .models import DEFAULT_STATUS, STATUSES, Task, db
 
 tasks_bp = Blueprint("tasks", __name__)
 
 TITLE_MAX = 120
 DESCRIPTION_MAX = 1000
-
-
-def json_object():
-    """The request body must be a JSON object."""
-    body = request.get_json(silent=True)
-    if not isinstance(body, dict):
-        raise ApiError(400, "validation_error", "Request body must be a JSON object.")
-    return body
 
 
 def get_own_task(task_id):
